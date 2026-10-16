@@ -1,9 +1,9 @@
+import { getDatabase } from "@/database/client";
+import { NavigationBar } from "expo-navigation-bar";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-
-import { getDatabase } from "@/database/client";
 import { theme } from "../constants/theme";
 
 export default function RootLayout() {
@@ -44,6 +44,7 @@ export default function RootLayout() {
 
   return (
     <>
+      <NavigationBar style="light" />
       <StatusBar style="light" />
       <Stack
         screenOptions={{

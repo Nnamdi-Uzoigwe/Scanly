@@ -1,25 +1,35 @@
 {
   "expo": {
     "name": "Scanly",
-    "slug": "Scanly",
+    "slug": "scanly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "scanly",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0D12",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0D12",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.nnamdi_2222.Scanly"
+      // "navigationBar": {
+      //   "backgroundColor": "#0B0D12",
+      //   "barStyle": "light-content"
+      // }
     },
+    // "androidNavigationBar": {
+    //   "backgroundColor": "#0B0D12",
+    //   "barStyle": "light-content"
+    // },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
@@ -29,13 +39,47 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0B0D12",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 76,
+          "dark": {
+            "backgroundColor": "#0B0D12",
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 76
+          }
         }
       ],
       "expo-sqlite",
       "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scanly uses the camera to scan your documents."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Scanly accesses your photos so you can import images as document pages."
+        }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false,
+          "hidden": false,
+          "style": "light"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Scanly saves exported documents to your photo library when you choose to.",
+          "savePhotosPermission": "Scanly saves exported documents to your photo library when you choose to.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      "expo-document-picker",
       "expo-status-bar"
     ],
     "experiments": {
