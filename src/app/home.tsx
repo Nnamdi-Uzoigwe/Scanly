@@ -2,10 +2,10 @@ import { router, useFocusEffect } from "expo-router";
 import {
   ArrowDownToLine,
   ArrowRight,
-  Clock3,
   FileText,
   ScanLine,
   Search,
+  Settings,
   Trash2,
 } from "lucide-react-native";
 import { useCallback, useState } from "react";
@@ -27,6 +27,7 @@ import {
   getDocuments,
   type ScanDocument,
 } from "../lib/documents";
+import { runImport, type ImportSource } from "../lib/import";
 
 export default function HomeScreen() {
   const [documents, setDocuments] = useState<ScanDocument[]>([]);
@@ -73,6 +74,28 @@ export default function HomeScreen() {
     );
   }
 
+  function handleImportPress() {
+    Alert.alert("Import images", "Choose where to import from.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "From photos", onPress: () => void doImport("photos") },
+      { text: "From files", onPress: () => void doImport("files") },
+    ]);
+  }
+
+  async function doImport(source: ImportSource) {
+    const outcome = await runImport(source);
+    if (outcome.status === "saved") {
+      router.push({
+        pathname: "/document/[id]",
+        params: { id: outcome.documentId },
+      });
+      return;
+    }
+    if (outcome.status === "error") {
+      Alert.alert("Import failed", outcome.message);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -87,11 +110,11 @@ export default function HomeScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Search documents"
+            accessibilityLabel="Open settings"
             style={styles.iconButton}
-            // onPress={() => router.push("/search")}
+            onPress={() => router.push("/settings")}
           >
-            <Search size={21} color={theme.colors.text} />
+            <Settings size={21} color={theme.colors.text} />
           </Pressable>
         </View>
 
@@ -125,21 +148,26 @@ export default function HomeScreen() {
         <View style={styles.quickActions}>
           <Pressable
             style={styles.actionCard}
-            // onPress={() => router.push("/import")}
+            onPress={handleImportPress}
             accessibilityRole="button"
+            accessibilityLabel="Import images"
           >
             <ArrowDownToLine size={21} color={theme.colors.accent} />
-            <Text style={styles.actionTitle}>Import file</Text>
-            <Text style={styles.actionSubtitle}>PDF or image</Text>
+            <Text style={styles.actionTitle}>Import</Text>
+            <Text style={styles.actionSubtitle}>Photos or files</Text>
           </Pressable>
 
-          <View style={styles.actionCard}>
-            <Clock3 size={21} color={theme.colors.accent} />
-            <Text style={styles.actionTitle}>Recent files</Text>
-            <Text style={styles.actionSubtitle}>Your latest scans</Text>
-          </View>
+          <Pressable
+            style={styles.actionCard}
+            onPress={() => router.push("/search")}
+            accessibilityRole="button"
+            accessibilityLabel="Search documents"
+          >
+            <Search size={21} color={theme.colors.accent} />
+            <Text style={styles.actionTitle}>Search</Text>
+            <Text style={styles.actionSubtitle}>Titles and tags</Text>
+          </Pressable>
         </View>
-
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Your documents</Text>
           <Text style={styles.count}>

@@ -16,6 +16,14 @@ import {
 import { copyIntoScans, deleteFileSafe } from "./fileStorage";
 import { newId } from "./ids";
 
+function extensionFromUri(uri: string): string {
+  const withoutQuery = uri.split(/[?#]/)[0];
+  const match = withoutQuery.match(/\.([a-zA-Z0-9]+)$/);
+  const ext = match?.[1]?.toLowerCase();
+  if (!ext || ext.length > 5) return "jpg";
+  return ext;
+}
+
 export type { OcrStatus, ScanDocument, ScanPage };
 
 export async function getDocuments(): Promise<ScanDocument[]> {
@@ -50,7 +58,10 @@ export async function saveDocument(input: {
   try {
     for (const sourceUri of input.sourceUris) {
       const pageId = newId("page");
-      const imageUri = await copyIntoScans(sourceUri, `${pageId}.jpg`);
+      const imageUri = await copyIntoScans(
+        sourceUri,
+        `${pageId}.${extensionFromUri(sourceUri)}`,
+      );
       copied.push({ pageId, imageUri });
     }
   } catch (error) {

@@ -10,8 +10,10 @@ import {
   Image as ImageIcon,
   ListOrdered,
   Pencil,
+  Plus,
   RotateCcw,
   RotateCw,
+  Tag as TagIcon,
   Trash2,
   X,
 } from "lucide-react-native";
@@ -33,6 +35,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { TagPickerModal } from "../../components/TagPickerModal";
+import {
+  addTagToDocument,
+  listTagsForDocument,
+  removeTagFromDocument,
+  type ScanTag,
+} from "../../database/repositories/tagRepository";
 
 import { theme } from "@/constants/theme";
 import {
@@ -69,6 +78,8 @@ export default function DocumentDetailScreen() {
   const [reorderMode, setReorderMode] = useState(false);
   const [renameVisible, setRenameVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [tags, setTags] = useState<ScanTag[]>([]);
+  const [tagModalVisible, setTagModalVisible] = useState(false);
 
   const carouselRef = useRef<FlatList<ScanPage>>(null);
 
@@ -79,15 +90,19 @@ export default function DocumentDetailScreen() {
       return;
     }
     try {
-      const doc = await getDocumentById(documentId);
+      const [doc, pageRows, tagRows] = await Promise.all([
+        getDocumentById(documentId),
+        listPages(documentId),
+        listTagsForDocument(documentId),
+      ]);
       if (!doc) {
         setNotFound(true);
         setLoading(false);
         return;
       }
-      const pageRows = await listPages(documentId);
       setDocument(doc);
       setPages(pageRows);
+      setTags(tagRows);
       setCurrentIndex((prev) =>
         Math.min(prev, Math.max(pageRows.length - 1, 0)),
       );
@@ -134,6 +149,33 @@ export default function DocumentDetailScreen() {
       Alert.alert("Couldn't rename", "Please try again.");
     } finally {
       setRenameVisible(false);
+    }
+  }
+
+  async function handleAddTag(name: string) {
+    if (!document) return;
+    try {
+      const tag = await addTagToDocument(document.id, name);
+      setTags((prev) => {
+        if (prev.some((t) => t.id === tag.id)) return prev;
+        return [...prev, tag].sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+        );
+      });
+    } catch (error) {
+      console.error("Failed to add tag:", error);
+      Alert.alert("Couldn't add tag", "Please try again.");
+    }
+  }
+
+  async function handleRemoveTag(tagId: string) {
+    if (!document) return;
+    try {
+      await removeTagFromDocument(document.id, tagId);
+      setTags((prev) => prev.filter((t) => t.id !== tagId));
+    } catch (error) {
+      console.error("Failed to remove tag:", error);
+      Alert.alert("Couldn't remove tag", "Please try again.");
     }
   }
 
@@ -404,6 +446,12 @@ export default function DocumentDetailScreen() {
         </Pressable>
       </View>
 
+      <TagRow
+        tags={tags}
+        onAdd={() => setTagModalVisible(true)}
+        onRemove={handleRemoveTag}
+      />
+
       {pageCount === 0 ? (
         <View style={styles.center}>
           <View style={styles.emptyIconWrap}>
@@ -507,6 +555,12 @@ export default function DocumentDetailScreen() {
         initialValue={document.title}
         onCancel={() => setRenameVisible(false)}
         onSubmit={handleRename}
+      />
+      <TagPickerModal
+        visible={tagModalVisible}
+        attachedTagIds={tags.map((t) => t.id)}
+        onClose={() => setTagModalVisible(false)}
+        onSelect={handleAddTag}
       />
     </SafeAreaView>
   );
@@ -706,6 +760,59 @@ function RenameModal({
         </View>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+function TagRow({
+  tags,
+  onAdd,
+  onRemove,
+}: {
+  tags: ScanTag[];
+  onAdd: () => void;
+  onRemove: (tagId: string) => void;
+}) {
+  return (
+    <View style={styles.tagRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tagRowContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {tags.map((tag) => (
+          <View key={tag.id} style={styles.tagChip}>
+            <Text style={styles.tagChipText} numberOfLines={1}>
+              #{tag.name}
+            </Text>
+            <Pressable
+              onPress={() => onRemove(tag.id)}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove tag ${tag.name}`}
+            >
+              <X size={12} color={theme.colors.muted} />
+            </Pressable>
+          </View>
+        ))}
+
+        <Pressable
+          onPress={onAdd}
+          style={styles.tagAddChip}
+          accessibilityRole="button"
+          accessibilityLabel="Add tag"
+        >
+          {tags.length === 0 ? (
+            <TagIcon size={13} color={theme.colors.accent} />
+          ) : (
+            <Plus size={13} color={theme.colors.accent} />
+          )}
+          <Text style={styles.tagAddChipText}>
+            {tags.length === 0 ? "Add tags" : "Add"}
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -969,4 +1076,41 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.elevated,
   },
   modalActions: { flexDirection: "row", gap: 10 },
+  tagRow: {
+    paddingBottom: 8,
+  },
+  tagRowContent: {
+    paddingHorizontal: 22,
+    gap: 8,
+    alignItems: "center",
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.elevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    maxWidth: 180,
+  },
+  tagChipText: { color: theme.colors.text, fontSize: 12, fontWeight: "500" },
+  tagAddChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.accentSurface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  tagAddChipText: {
+    color: theme.colors.text,
+    fontSize: 12,
+    fontWeight: "500",
+  },
 });
