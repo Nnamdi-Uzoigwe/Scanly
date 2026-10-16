@@ -41,3 +41,23 @@ export async function fileExists(uri: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function copyIntoPdfs(
+  sourceUri: string,
+  filename: string,
+): Promise<string> {
+  await ensurePdfsDir();
+  const dest = `${PDFS_DIR}${filename}`;
+  await FileSystem.copyAsync({ from: sourceUri, to: dest });
+  return dest;
+}
+
+export async function getFileSize(uri: string): Promise<number> {
+  try {
+    const info = await FileSystem.getInfoAsync(uri);
+    if (!info.exists) return 0;
+    return typeof info.size === "number" ? info.size : 0;
+  } catch {
+    return 0;
+  }
+}

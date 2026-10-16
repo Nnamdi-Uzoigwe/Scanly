@@ -1,53 +1,58 @@
+import { formatBytes } from "@/lib/format";
+import { exportDocumentPdf } from "@/lib/pdf";
+import { sharePdf } from "@/lib/pdf/share";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
-    ArrowLeft,
-    ChevronDown,
-    ChevronUp,
-    Image as ImageIcon,
-    ListOrdered,
-    Pencil,
-    RotateCcw,
-    RotateCw,
-    Trash2,
-    X,
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Image as ImageIcon,
+  ListOrdered,
+  Pencil,
+  RotateCcw,
+  RotateCw,
+  Trash2,
+  X,
 } from "lucide-react-native";
 import { useCallback, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { theme } from "../../constants/theme";
+import { theme } from "@/constants/theme";
 import {
-    getDocumentById,
-    renameDocument,
-    setDocumentThumbnail,
-    touchDocument,
-    type ScanDocument,
-} from "../../database/repositories/documentRepository";
+  getDocumentById,
+  renameDocument,
+  setDocumentPdfUri,
+  setDocumentThumbnail,
+  touchDocument,
+  type ScanDocument,
+} from "@/database/repositories/documentRepository";
 import {
-    deletePageRow,
-    listPages,
-    replacePageOrder,
-    updatePageImageUri,
-    type ScanPage,
-} from "../../database/repositories/pageRepository";
-import { deleteDocument as deleteDocumentCascade } from "../../lib/documents";
-import { deleteFileSafe } from "../../lib/fileStorage";
-import { rotateImage } from "../../lib/imageOperations";
+  deletePageRow,
+  listPages,
+  replacePageOrder,
+  updatePageImageUri,
+  type ScanPage,
+} from "@/database/repositories/pageRepository";
+import { deleteDocument as deleteDocumentCascade } from "@/lib/documents";
+import { deleteFileSafe } from "@/lib/fileStorage";
+import { rotateImage } from "@/lib/imageOperations";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const PAGE_GAP = 12;
@@ -147,6 +152,7 @@ export default function DocumentDetailScreen() {
       // Persist the new URI first, then clean up the old file. If the DB write
       // fails we still have the old file and can retry.
       await updatePageImageUri(page.id, result.uri);
+      setDocumentPdfUri(document.id, null);
       await deleteFileSafe(page.imageUri);
 
       // If we just rotated page 0, refresh the document thumbnail too.
@@ -164,6 +170,35 @@ export default function DocumentDetailScreen() {
     } catch (error) {
       console.error("Failed to rotate page:", error);
       Alert.alert("Couldn't rotate page", "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    if (!document || busy) return;
+    setBusy(true);
+    try {
+      const result = await exportDocumentPdf(document.id);
+      setDocument((prev) =>
+        prev
+          ? { ...prev, pdfUri: result.uri, pageCount: result.pageCount }
+          : prev,
+      );
+
+      const outcome = await sharePdf(result.uri, document.title);
+      if (outcome === "unavailable") {
+        Alert.alert(
+          "PDF generated",
+          `Saved to your device (${formatBytes(result.byteSize)}). Sharing is not available on this platform.`,
+        );
+      }
+    } catch (error) {
+      console.error("Failed to export PDF:", error);
+      Alert.alert(
+        "Couldn't generate PDF",
+        "Please try again. Your pages are unchanged.",
+      );
     } finally {
       setBusy(false);
     }
@@ -187,6 +222,7 @@ export default function DocumentDetailScreen() {
               setBusy(true);
               try {
                 await deletePageRow(page.id);
+                setDocumentPdfUri(document.id, null);
                 const remaining = pages.filter((p) => p.id !== page.id);
 
                 // Re-index the remaining pages so positions stay contiguous.
@@ -276,6 +312,7 @@ export default function DocumentDetailScreen() {
         document.id,
         pages.map((p) => p.id),
       );
+      setDocumentPdfUri(document.id, null);
       const first = pages[0];
       if (first) {
         await setDocumentThumbnail(document.id, first.imageUri);
@@ -441,6 +478,12 @@ export default function DocumentDetailScreen() {
               icon={<RotateCw size={20} color={theme.colors.text} />}
               onPress={() => handleRotate("cw")}
               disabled={busy}
+            />
+            <ActionButton
+              label="Export PDF"
+              icon={<FileText size={20} color={theme.colors.text} />}
+              onPress={handleExportPdf}
+              disabled={busy || pageCount === 0}
             />
             <ActionButton
               label="Delete page"

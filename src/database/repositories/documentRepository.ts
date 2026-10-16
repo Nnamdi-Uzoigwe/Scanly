@@ -125,9 +125,8 @@ export async function setDocumentPdfUri(
 ): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    "UPDATE documents SET pdf_uri = ?, updated_at = ? WHERE id = ?",
+    "UPDATE documents SET pdf_uri = ? WHERE id = ?",
     pdfUri,
-    new Date().toISOString(),
     id,
   );
 }
@@ -157,4 +156,40 @@ export async function touchDocument(id: string): Promise<void> {
 export async function deleteDocumentRow(id: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync("DELETE FROM documents WHERE id = ?", id);
+}
+
+export async function searchDocuments(query: string): Promise<ScanDocument[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const db = await getDatabase();
+  const like = `%${escapeLike(trimmed)}%`;
+
+  const rows = await db.getAllAsync<DocumentRow>(
+    `${SELECT_DOCUMENT}
+     WHERE d.title LIKE ? ESCAPE '\\'
+        OR EXISTS (
+          SELECT 1 FROM pages p
+          WHERE p.document_id = d.id
+            AND p.ocr_text IS NOT NULL
+            AND p.ocr_text LIKE ? ESCAPE '\\'
+        )
+        OR EXISTS (
+          SELECT 1 FROM document_tags dt
+          JOIN tags t ON t.id = dt.tag_id
+          WHERE dt.document_id = d.id
+            AND t.name LIKE ? ESCAPE '\\'
+        )
+     ORDER BY d.updated_at DESC`,
+    like,
+    like,
+    like,
+  );
+
+  return rows.map(toDocument);
+}
+
+// Escape user input so `%` and `_` are treated as literal characters.
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }
