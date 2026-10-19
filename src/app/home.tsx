@@ -12,9 +12,9 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -27,6 +27,7 @@ import {
   getDocuments,
   type ScanDocument,
 } from "../lib/documents";
+import { notifySuccess, notifyWarning, tapLight } from "../lib/haptics";
 import { runImport, type ImportSource } from "../lib/import";
 
 export default function HomeScreen() {
@@ -51,6 +52,7 @@ export default function HomeScreen() {
   );
 
   async function handleDelete(document: ScanDocument) {
+    notifyWarning();
     Alert.alert(
       "Delete document?",
       `"${document.title}" and its pages will be permanently removed.`,
@@ -75,6 +77,7 @@ export default function HomeScreen() {
   }
 
   function handleImportPress() {
+    tapLight();
     Alert.alert("Import images", "Choose where to import from.", [
       { text: "Cancel", style: "cancel" },
       { text: "From photos", onPress: () => void doImport("photos") },
@@ -85,6 +88,7 @@ export default function HomeScreen() {
   async function doImport(source: ImportSource) {
     const outcome = await runImport(source);
     if (outcome.status === "saved") {
+      notifySuccess();
       router.push({
         pathname: "/document/[id]",
         params: { id: outcome.documentId },
@@ -96,149 +100,167 @@ export default function HomeScreen() {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>scanly</Text>
-            <Text style={styles.subtitle}>Your documents, organized.</Text>
-          </View>
+  function handleOpenScan() {
+    tapLight();
+    router.push("/scan");
+  }
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-            style={styles.iconButton}
-            onPress={() => router.push("/settings")}
-          >
-            <Settings size={21} color={theme.colors.text} />
-          </Pressable>
-        </View>
+  function handleOpenSearch() {
+    tapLight();
+    router.push("/search");
+  }
 
-        <View style={styles.welcome}>
-          <Text style={styles.eyebrow}>YOUR WORKSPACE</Text>
-          <Text style={styles.heading}>
-            Everything important, in one place.
-          </Text>
-          <Text style={styles.description}>
-            Scan paper documents, keep them organized, and find what you need.
-          </Text>
+  const header = (
+    <View>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.brand}>scanly</Text>
+          <Text style={styles.subtitle}>Your documents, organized.</Text>
         </View>
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push("/scan")}
-          style={styles.primaryButton}
+          accessibilityLabel="Open settings"
+          style={styles.iconButton}
+          onPress={() => router.push("/settings")}
         >
-          <View style={styles.primaryIcon}>
-            <ScanLine size={23} color={theme.colors.text} />
-          </View>
-          <View style={styles.primaryCopy}>
-            <Text style={styles.primaryTitle}>Scan a document</Text>
-            <Text style={styles.primarySubtitle}>
-              Capture pages with your camera
-            </Text>
-          </View>
-          <ArrowRight size={20} color={theme.colors.text} />
+          <Settings size={21} color={theme.colors.text} />
         </Pressable>
+      </View>
 
-        <View style={styles.quickActions}>
-          <Pressable
-            style={styles.actionCard}
-            onPress={handleImportPress}
-            accessibilityRole="button"
-            accessibilityLabel="Import images"
-          >
-            <ArrowDownToLine size={21} color={theme.colors.accent} />
-            <Text style={styles.actionTitle}>Import</Text>
-            <Text style={styles.actionSubtitle}>Photos or files</Text>
-          </Pressable>
+      <View style={styles.welcome}>
+        <Text style={styles.eyebrow}>YOUR WORKSPACE</Text>
+        <Text style={styles.heading}>Everything important, in one place.</Text>
+        <Text style={styles.description}>
+          Scan paper documents, keep them organized, and find what you need.
+        </Text>
+      </View>
 
-          <Pressable
-            style={styles.actionCard}
-            onPress={() => router.push("/search")}
-            accessibilityRole="button"
-            accessibilityLabel="Search documents"
-          >
-            <Search size={21} color={theme.colors.accent} />
-            <Text style={styles.actionTitle}>Search</Text>
-            <Text style={styles.actionSubtitle}>Titles and tags</Text>
-          </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        onPress={handleOpenScan}
+        style={styles.primaryButton}
+      >
+        <View style={styles.primaryIcon}>
+          <ScanLine size={23} color={theme.colors.text} />
         </View>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Your documents</Text>
-          <Text style={styles.count}>
-            {loading
-              ? "Loading…"
-              : `${documents.length} ${documents.length === 1 ? "file" : "files"}`}
+        <View style={styles.primaryCopy}>
+          <Text style={styles.primaryTitle}>Scan a document</Text>
+          <Text style={styles.primarySubtitle}>
+            Capture pages with your camera
           </Text>
         </View>
+        <ArrowRight size={20} color={theme.colors.text} />
+      </Pressable>
 
-        {loading ? (
-          <ActivityIndicator color={theme.colors.accent} />
-        ) : documents.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <FileText size={28} color={theme.colors.muted} />
-            </View>
-            <Text style={styles.emptyTitle}>No documents yet</Text>
-            <Text style={styles.emptyDescription}>
-              Your scanned and imported documents will appear here.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.documentList}>
-            {documents.map((document) => (
-              <View key={document.id} style={styles.documentRow}>
-                <Pressable
-                  style={styles.documentMain}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/document/[id]",
-                      params: { id: document.id },
-                    })
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open ${document.title}`}
-                >
-                  {document.thumbnailUri ? (
-                    <Image
-                      source={{ uri: document.thumbnailUri }}
-                      style={styles.thumbnail}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.thumbnail} />
-                  )}
-                  <View style={styles.documentInfo}>
-                    <Text style={styles.documentTitle} numberOfLines={1}>
-                      {document.title}
-                    </Text>
-                    <Text style={styles.documentDate}>
-                      {new Date(document.updatedAt).toLocaleDateString()}
-                      {"  ·  "}
-                      {document.pageCount}{" "}
-                      {document.pageCount === 1 ? "page" : "pages"}
-                    </Text>
-                  </View>
-                </Pressable>
+      <View style={styles.quickActions}>
+        <Pressable
+          style={styles.actionCard}
+          onPress={handleImportPress}
+          accessibilityRole="button"
+          accessibilityLabel="Import images"
+        >
+          <ArrowDownToLine size={21} color={theme.colors.accent} />
+          <Text style={styles.actionTitle}>Import</Text>
+          <Text style={styles.actionSubtitle}>Photos or files</Text>
+        </Pressable>
 
-                <Pressable
-                  style={styles.deleteButton}
-                  onPress={() => void handleDelete(document)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${document.title}`}
-                >
-                  <Trash2 size={18} color={theme.colors.danger} />
-                </Pressable>
+        <Pressable
+          style={styles.actionCard}
+          onPress={handleOpenSearch}
+          accessibilityRole="button"
+          accessibilityLabel="Search documents"
+        >
+          <Search size={21} color={theme.colors.accent} />
+          <Text style={styles.actionTitle}>Search</Text>
+          <Text style={styles.actionSubtitle}>Titles and tags</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Your documents</Text>
+        <Text style={styles.count}>
+          {loading
+            ? "Loading…"
+            : `${documents.length} ${documents.length === 1 ? "file" : "files"}`}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const emptyState = loading ? (
+    <ActivityIndicator
+      color={theme.colors.accent}
+      style={styles.loadingIndicator}
+    />
+  ) : (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <FileText size={28} color={theme.colors.muted} />
+      </View>
+      <Text style={styles.emptyTitle}>No documents yet</Text>
+      <Text style={styles.emptyDescription}>
+        Your scanned and imported documents will appear here.
+      </Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <FlatList
+        data={documents}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={header}
+        ListEmptyComponent={emptyState}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        renderItem={({ item: document }) => (
+          <View style={styles.documentRow}>
+            <Pressable
+              style={styles.documentMain}
+              onPress={() =>
+                router.push({
+                  pathname: "/document/[id]",
+                  params: { id: document.id },
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${document.title}`}
+            >
+              {document.thumbnailUri ? (
+                <Image
+                  source={{ uri: document.thumbnailUri }}
+                  style={styles.thumbnail}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.thumbnail} />
+              )}
+              <View style={styles.documentInfo}>
+                <Text style={styles.documentTitle} numberOfLines={1}>
+                  {document.title}
+                </Text>
+                <Text style={styles.documentDate}>
+                  {new Date(document.updatedAt).toLocaleDateString()}
+                  {"  ·  "}
+                  {document.pageCount}{" "}
+                  {document.pageCount === 1 ? "page" : "pages"}
+                </Text>
               </View>
-            ))}
+            </Pressable>
+
+            <Pressable
+              style={styles.deleteButton}
+              onPress={() => void handleDelete(document)}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete ${document.title}`}
+            >
+              <Trash2 size={18} color={theme.colors.danger} />
+            </Pressable>
           </View>
         )}
-      </ScrollView>
+      />
     </SafeAreaView>
   );
 }
@@ -342,6 +364,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: theme.colors.text, fontSize: 18, fontWeight: "600" },
   count: { color: theme.colors.muted, fontSize: 12 },
+  loadingIndicator: { marginTop: 12 },
   emptyState: {
     alignItems: "center",
     paddingHorizontal: 20,
@@ -369,7 +392,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     maxWidth: 260,
   },
-  documentList: { gap: 10 },
+  separator: { height: 10 },
   documentRow: {
     flexDirection: "row",
     alignItems: "center",

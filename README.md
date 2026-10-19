@@ -1,56 +1,44 @@
-# Welcome to your Expo app 👋
+# Scanly
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A local-first document scanner for iOS and Android. Capture pages with the
+camera, import images, organize documents, and export real PDFs.
 
-## Get started
+Everything stays on the device. No account, no backend, no telemetry.
 
-1. Install dependencies
+## Status
 
-   ```bash
-   npm install
-   ```
+Early preview. Runs in **Expo Go** on iOS and Android.
 
-2. Start the app
+### Working
 
-   ```bash
-   npx expo start
-   ```
+- Multi-page camera capture with filmstrip review
+- Import from photo library and file picker (images)
+- Document detail: carousel, rotate, delete page, reorder
+- Rename, tags (add / remove), delete document
+- PDF export via `pdf-lib`, native share sheet
+- Search across titles and tags
+- Settings: haptics toggle, storage size, clear all data
+- SQLite persistence with schema migrations
 
-In the output, you'll find options to open the app in a
+### Not yet
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- **OCR / text recognition** — service interface exists at `src/lib/ocr/`.
+  No engine is bundled, so it reports itself as unavailable. Requires a
+  development build; cannot run in Expo Go.
+- Manual crop
+- Image enhancement (grayscale / black and white)
+- PDF import
+- Automated tests
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Requirements
 
-## Get a fresh project
+- Node 20+
+- Expo SDK 57
+- A physical device with Expo Go (iOS 15+ or Android 12+)
 
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

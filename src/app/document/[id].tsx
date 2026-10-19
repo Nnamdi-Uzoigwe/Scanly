@@ -42,6 +42,7 @@ import {
   removeTagFromDocument,
   type ScanTag,
 } from "../../database/repositories/tagRepository";
+import { notifySuccess, notifyWarning, tapLight } from "../../lib/haptics";
 
 import { theme } from "@/constants/theme";
 import {
@@ -155,6 +156,7 @@ export default function DocumentDetailScreen() {
   async function handleAddTag(name: string) {
     if (!document) return;
     try {
+      tapLight();
       const tag = await addTagToDocument(document.id, name);
       setTags((prev) => {
         if (prev.some((t) => t.id === tag.id)) return prev;
@@ -171,6 +173,7 @@ export default function DocumentDetailScreen() {
   async function handleRemoveTag(tagId: string) {
     if (!document) return;
     try {
+      tapLight();
       await removeTagFromDocument(document.id, tagId);
       setTags((prev) => prev.filter((t) => t.id !== tagId));
     } catch (error) {
@@ -185,6 +188,7 @@ export default function DocumentDetailScreen() {
     if (!page) return;
 
     setBusy(true);
+    tapLight();
     try {
       const result = await rotateImage(
         page.imageUri,
@@ -222,6 +226,7 @@ export default function DocumentDetailScreen() {
     setBusy(true);
     try {
       const result = await exportDocumentPdf(document.id);
+      notifySuccess();
       setDocument((prev) =>
         prev
           ? { ...prev, pdfUri: result.uri, pageCount: result.pageCount }
@@ -251,6 +256,7 @@ export default function DocumentDetailScreen() {
     const page = pages[currentIndex];
     if (!page) return;
 
+    notifyWarning();
     Alert.alert(
       "Delete this page?",
       `Page ${currentIndex + 1} of ${pageCount} will be permanently removed.`,
@@ -311,6 +317,7 @@ export default function DocumentDetailScreen() {
 
   function handleDeleteDocument() {
     if (!document) return;
+    notifyWarning();
     Alert.alert(
       "Delete document?",
       `"${document.title}" and all ${pageCount} ${
@@ -340,6 +347,7 @@ export default function DocumentDetailScreen() {
   function movePage(index: number, direction: -1 | 1) {
     const target = index + direction;
     if (target < 0 || target >= pages.length) return;
+    tapLight();
     const next = [...pages];
     const [moved] = next.splice(index, 1);
     next.splice(target, 0, moved);
